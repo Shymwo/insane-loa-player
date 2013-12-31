@@ -29,7 +29,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>put.ai.snort.naiveplayer.NaivePlayer</mainClass>
+                            <mainClass>put.ai.snort.insaneloaplayer.InsaneLoaPlayer</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
