@@ -163,6 +163,8 @@ public class InsaneLoaPlayer extends Player {
 
     	Float newValue = oldValue;
     	newValue = getNewQValue(newValue, m, b, c);
+    	if (newValue == Float.POSITIVE_INFINITY)
+    		return newValue;
     	newValue = getNewCHValue(newValue, m, b, c);
 
     	return newValue;
@@ -172,6 +174,8 @@ public class InsaneLoaPlayer extends Player {
     public Float getNewQValue(Float value, MoveMove m, Board b, Color c) {
     	Board bc = b.clone();
     	bc.doMove(m);
+    	if (!bc.canMove(getOpponent(c)))
+    		return Float.POSITIVE_INFINITY;
     	for (int x = m.getSrcX() - 1; x <= m.getSrcX(); x++)
     		for (int y = m.getSrcY() - 1; y <= m.getSrcY(); y++) {
     			value += analyzeQuad(b, c, x, y);
