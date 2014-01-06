@@ -13,6 +13,9 @@ import put.ai.snort.game.moves.MoveMove;
 
 public class InsaneLoaPlayer extends Player {
 
+	// set depth of alpha-beta algorithm
+	private static int maxDepth = 3;
+
 	private Integer[][] cHBoard;
 
 	@Override
@@ -21,28 +24,118 @@ public class InsaneLoaPlayer extends Player {
         		"Szymon Weihs 106519";
     }
 
-	// faster heuristic
     @Override
     public Move nextMove(Board b) {
-    	Float actualValue = getValue(b);
-
-        List<Move> moves = b.getMovesFor(getColor());
+    	Color c = getColor();
+        List<Move> moves = b.getMovesFor(c);
         Move bestMove = moves.get(0);
         Float bestValue = Float.NEGATIVE_INFINITY;
 
-        for (Move m: moves) {
-        	Float value = getNewValue(actualValue, (MoveMove) m, b);
-        	System.out.println(value);
-        	if (value > bestValue) {
-        		bestValue = value;
-        		bestMove = m;
-        	}
-        }
+        int depth = 1;
+        Float alpha = Float.NEGATIVE_INFINITY;
+        Float beta = Float.POSITIVE_INFINITY;
 
-        System.out.println(bestValue);
+        if (depth == maxDepth) {
+        	Float actualValue = getValue(b, c);
+            for (Move m: moves) {
+            	Float value = getNewValue(actualValue, (MoveMove) m, b, c);
+            	if (value > bestValue) {
+            		bestValue = value;
+            		bestMove = m;
+            	}
+            }
+        } else {
+        	// alphaValue - first iteration
+	        for (Move m: moves) {
+	        	Board bc = b.clone();
+	        	bc.doMove(m);
+	        	Float newValue = getBetaValue(bc, alpha, beta, depth + 1);
+	        	if (newValue > bestValue) {
+	        		bestValue = newValue;
+	        		bestMove = m;
+	        	}
+	        	if (bestValue >= beta) {
+	        		return bestMove;
+	        	}
+	        	alpha = Math.max(bestValue, alpha);
+	        }
+        }
 
     	return bestMove;
     }
+
+    public Float getAlphaValue(Board b, Float alpha, Float beta, int depth) {
+    	Color c = getColor();
+        List<Move> moves = b.getMovesFor(c);
+        Float bestValue = Float.NEGATIVE_INFINITY;
+
+        if (depth == maxDepth) {
+        	Float actualValue = getValue(b, c);
+            for (Move m: moves) {
+            	Float value = getNewValue(actualValue, (MoveMove) m, b, c);
+            	if (value > bestValue)
+            		bestValue = value;
+            }
+        } else {
+	        for (Move m: moves) {
+	        	Board bc = b.clone();
+	        	bc.doMove(m);
+	        	bestValue = Math.max(bestValue, getBetaValue(bc, alpha, beta, depth + 1));
+	        	if (bestValue >= beta)
+	        		return bestValue;
+	        	alpha = Math.max(bestValue, alpha);
+	        }
+        }
+
+    	return bestValue;
+    }
+
+    public Float getBetaValue(Board b, Float alpha, Float beta, int depth) {
+    	Color c = getOpponent(getColor());
+        List<Move> moves = b.getMovesFor(c);
+        Float bestOpponentValue = Float.POSITIVE_INFINITY;
+
+        if (depth == maxDepth) {
+        	Float actualValue = getValue(b, c);
+            for (Move m: moves) {
+            	Float value = -getNewValue(actualValue, (MoveMove) m, b, c);
+            	if (value < bestOpponentValue)
+            		bestOpponentValue = value;
+            }
+        } else {
+	        for (Move m: moves) {
+	        	Board bc = b.clone();
+	        	bc.doMove(m);
+	        	bestOpponentValue = Math.min(bestOpponentValue,
+	        			getAlphaValue(bc, alpha, beta, depth + 1));
+	        	if (bestOpponentValue <= alpha)
+	        		return bestOpponentValue;
+	        	beta = Math.min(bestOpponentValue, beta);
+	        }
+        }
+
+    	return bestOpponentValue;
+    }
+
+    //fast heuristic
+//  @Override
+//  public Move nextMove(Board b) {
+//  	Float actualValue = getValue(b);
+//
+//      List<Move> moves = b.getMovesFor(getColor());
+//      Move bestMove = moves.get(0);
+//      Float bestValue = Float.NEGATIVE_INFINITY;
+//
+//      for (Move m: moves) {
+//      	Float value = getNewValue(actualValue, (MoveMove) m, b);
+//      	if (value > bestValue) {
+//      		bestValue = value;
+//      		bestMove = m;
+//      	}
+//      }
+//
+//  	return bestMove;
+//  }
 
     //first heuristic
 //    @Override
@@ -66,49 +159,49 @@ public class InsaneLoaPlayer extends Player {
 //    }
 
     // Fast Heuristic Value using old value and move parameters
-    public Float getNewValue(Float oldValue, MoveMove m, Board b) {
+    public Float getNewValue(Float oldValue, MoveMove m, Board b, Color c) {
 
     	Float newValue = oldValue;
-    	newValue = getNewQValue(newValue, m, b);
-    	newValue = getNewCHValue(newValue, m, b);
+    	newValue = getNewQValue(newValue, m, b, c);
+    	newValue = getNewCHValue(newValue, m, b, c);
 
     	return newValue;
     }
 
     // Fast Heuristic - correct Quad value
-    public Float getNewQValue(Float value, MoveMove m, Board b) {
+    public Float getNewQValue(Float value, MoveMove m, Board b, Color c) {
     	Board bc = b.clone();
     	bc.doMove(m);
     	for (int x = m.getSrcX() - 1; x <= m.getSrcX(); x++)
     		for (int y = m.getSrcY() - 1; y <= m.getSrcY(); y++) {
-    			value += analyzeQuad(b, getColor(), x, y);
-    			value -= analyzeQuad(bc, getColor(), x, y);
+    			value += analyzeQuad(b, c, x, y);
+    			value -= analyzeQuad(bc, c, x, y);
     		}
     	for (int x = m.getDstX() - 1; x <= m.getDstX(); x++)
     		for (int y = m.getDstY() - 1; y <= m.getDstY(); y++) {
-    			value += analyzeQuad(b, getColor(), x, y);
-    			value -= analyzeQuad(bc, getColor(), x, y);
-    	    	if (b.getState(m.getDstX(), m.getDstY()) == getOpponent(getColor())) {
-    	    		value -= analyzeQuad(b, getOpponent(getColor()), x, y);
-    	    		value += analyzeQuad(bc, getOpponent(getColor()), x, y);
+    			value += analyzeQuad(b, c, x, y);
+    			value -= analyzeQuad(bc, c, x, y);
+    	    	if (b.getState(m.getDstX(), m.getDstY()) == getOpponent(c)) {
+    	    		value -= analyzeQuad(b, getOpponent(c), x, y);
+    	    		value += analyzeQuad(bc, getOpponent(c), x, y);
     	    	}
     		}
     	return value;
     }
 
     // Fast Heuristic - correct CH value
-    public Float getNewCHValue(Float value, MoveMove m, Board b) {
+    public Float getNewCHValue(Float value, MoveMove m, Board b, Color c) {
     	value -= cHBoard[m.getSrcX()][m.getSrcY()];
     	value += cHBoard[m.getDstX()][m.getDstY()];
-    	if (b.getState(m.getDstX(), m.getDstY()) == getOpponent(getColor()))
+    	if (b.getState(m.getDstX(), m.getDstY()) == getOpponent(c))
     		value += cHBoard[m.getDstX()][m.getDstY()];
     	return value;
     }
 
     // Overall Heuristic Value
-    public Float getValue(Board b) {
-    	return (getQValue(b, getColor()) - getQValue(b, getOpponent(getColor())))
-    			+ (getCHValue(b, getColor()) - getCHValue (b, getOpponent(getColor())));
+    public Float getValue(Board b, Color c) {
+    	return (getQValue(b, c) - getQValue(b, getOpponent(c)))
+    			+ (getCHValue(b, c) - getCHValue (b, getOpponent(c)));
     }
 
     // Quad Heuristic Value
@@ -179,6 +272,14 @@ public class InsaneLoaPlayer extends Player {
 
 	public void setCHBoard(Integer[][] chBoard) {
 		this.cHBoard = chBoard;
+	}
+
+	public static int getMaxDepth() {
+		return maxDepth;
+	}
+
+	public static void setMaxDepth(int maxDepth) {
+		InsaneLoaPlayer.maxDepth = maxDepth;
 	}
 
 }
