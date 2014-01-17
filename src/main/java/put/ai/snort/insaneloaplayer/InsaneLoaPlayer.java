@@ -14,7 +14,7 @@ import put.ai.snort.game.moves.MoveMove;
 public class InsaneLoaPlayer extends Player {
 
 	// set depth of alpha-beta algorithm
-	private static int maxDepth = 3;
+	private static int maxDepth = 5;
 
 	private Integer[][] cHBoard;
 
@@ -174,7 +174,7 @@ public class InsaneLoaPlayer extends Player {
     public Float getNewQValue(Float value, MoveMove m, Board b, Color c) {
     	Board bc = b.clone();
     	bc.doMove(m);
-    	if (!bc.canMove(getOpponent(c)))
+    	if (bc.getWinner() == c)
     		return Float.POSITIVE_INFINITY;
     	for (int x = m.getSrcX() - 1; x <= m.getSrcX(); x++)
     		for (int y = m.getSrcY() - 1; y <= m.getSrcY(); y++) {
